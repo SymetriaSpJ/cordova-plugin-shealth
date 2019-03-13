@@ -18,7 +18,7 @@
 
 package com.cordova.shealth;
 
-import com.globetrekkerchallenge.app.R;
+//import com.globetrekkerchallenge.app.R;
 import com.samsung.android.sdk.healthdata.HealthConnectionErrorResult;
 import com.samsung.android.sdk.healthdata.HealthConstants.StepCount;
 import com.samsung.android.sdk.healthdata.HealthConstants.Sleep;
@@ -233,7 +233,7 @@ public class ShealthPlugin extends CordovaPlugin {
     }
 
     private Set<PermissionKey> generatePermissionKeySet() {
-        Set<PermissionKey> pmsKeySet = new HashSet<>();
+        Set<PermissionKey> pmsKeySet = new HashSet<PermissionKey>();
         pmsKeySet.add(new PermissionKey(Sleep.HEALTH_DATA_TYPE, PermissionType.READ));
         pmsKeySet.add(new PermissionKey(StepCount.HEALTH_DATA_TYPE, PermissionType.READ));
         pmsKeySet.add(new PermissionKey(StepCountReader.STEP_SUMMARY_DATA_TYPE_NAME, PermissionType.READ));

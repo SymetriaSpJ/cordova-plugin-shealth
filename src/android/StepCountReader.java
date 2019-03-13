@@ -125,7 +125,10 @@ public class StepCountReader {
                 .build();
 
         try {
-            mResolver.read(request).setResultListener(result -> {
+            mResolver.read(request).setResultListener(new HealthResultHolder.ResultListener<HealthDataResolver.ReadResult>(){
+
+            @Override
+            public void onResult(HealthDataResolver.ReadResult result) {
 
 
                 int totalCount = 0;
@@ -164,7 +167,7 @@ public class StepCountReader {
                     callbackContext.success(sleepResponse);
                 }
 
-            });
+            }});
         } catch (Exception e) {
             JSONArray stepResponse = new JSONArray();
             Log.e("StepCounterReader", "Getting daily step trend fails.", e);
@@ -185,7 +188,11 @@ public class StepCountReader {
                 .build();
 
         try {
-            mResolver.read(request).setResultListener(result -> {
+            mResolver.read(request).setResultListener(new HealthResultHolder.ResultListener<HealthDataResolver.ReadResult>(){
+
+            @Override
+            public void onResult(HealthDataResolver.ReadResult result) {
+
                 int totalCount = 0;
 
                 JSONArray stepResponse = new JSONArray();
@@ -224,7 +231,7 @@ public class StepCountReader {
                     callbackContext.success(stepResponse);
                 }
 
-            });
+            }});
         } catch (Exception e) {
             JSONArray stepResponse = new JSONArray();
             Log.e("StepCounterReader", "Getting daily step trend fails.", e);
@@ -249,9 +256,13 @@ public class StepCountReader {
                 .build();
 
         try {
-            mResolver.aggregate(request).setResultListener(result -> {
+            mResolver.aggregate(request).setResultListener(new HealthResultHolder.ResultListener<HealthDataResolver.AggregateResult>(){
 
-                List<StepBinningData> binningCountArray = new ArrayList<>();
+            @Override
+            public void onResult(HealthDataResolver.AggregateResult result) {
+
+
+                List<StepBinningData> binningCountArray = new ArrayList<StepBinningData>();
 
                 try {
                     for (HealthData data : result) {
@@ -268,7 +279,7 @@ public class StepCountReader {
                 } finally {
                     result.close();
                 }
-            });
+            }});
         } catch (Exception e) {
             Log.e("StepDiary", "Getting step binning data fails.", e);
         }
