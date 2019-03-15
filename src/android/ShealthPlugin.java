@@ -118,6 +118,9 @@ public class ShealthPlugin extends CordovaPlugin {
             Log.d(TAG, "onConnected");
             if (isPermissionAcquired()) {
                 Log.d(TAG, "Permission is acquired already");
+                if (connectCallbackContext != null) {
+                  connectCallbackContext.success();
+                }
             } else {
                 requestPermission();
             }
@@ -127,6 +130,9 @@ public class ShealthPlugin extends CordovaPlugin {
         public void onConnectionFailed(HealthConnectionErrorResult error) {
             Log.d(TAG, "onConnectionFailed");
             showConnectionFailureDialog(error);
+            if (connectCallbackContext != null) {
+              connectCallbackContext.error("Failed to connect: " + error.getErrorCode());
+            }
         }
 
         @Override
