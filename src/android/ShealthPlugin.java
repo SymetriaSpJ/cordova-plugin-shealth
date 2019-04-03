@@ -73,6 +73,7 @@ public class ShealthPlugin extends CordovaPlugin {
     private Activity actContext;
     private Context appContext;
     private CallbackContext connectCallbackContext;
+    private long reqAuth = 0;
     private HashMap<String, TimeUnit> TimeUnitLookup;
     private HashMap<TimeUnit, String> TimeUnitRLookup;
 
@@ -122,7 +123,13 @@ public class ShealthPlugin extends CordovaPlugin {
                   connectCallbackContext.success();
                 }
             } else {
-                requestPermission();
+                if (reqAuth == 1) {
+                    requestPermission();
+                } else {
+                    if (connectCallbackContext != null) {
+                        connectCallbackContext.error("no permission, no auth");
+                    }
+                }
             }
         }
 
@@ -183,16 +190,16 @@ public class ShealthPlugin extends CordovaPlugin {
         if (error.hasResolution()) {
             switch (error.getErrorCode()) {
                 case HealthConnectionErrorResult.PLATFORM_NOT_INSTALLED:
-                    alert.setMessage("Platform is not installed");
+                    alert.setMessage("Samsung Health: Platform is not installed");
                     break;
                 case HealthConnectionErrorResult.OLD_VERSION_PLATFORM:
-                    alert.setMessage("Requires Upgrade");
+                    alert.setMessage("Samsung Health: Requires Upgrade");
                     break;
                 case HealthConnectionErrorResult.PLATFORM_DISABLED:
-                    alert.setMessage("Platform is disabled");
+                    alert.setMessage("Samsung Health: Platform is disabled");
                     break;
                 case HealthConnectionErrorResult.USER_AGREEMENT_NEEDED:
-                    alert.setMessage("User agreement needed");
+                    alert.setMessage("Samsung Health: User agreement needed");
                     break;
                 default:
                     alert.setMessage("Connection available");
@@ -204,7 +211,9 @@ public class ShealthPlugin extends CordovaPlugin {
 
         alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
-                // continue with delete
+                if (error.hasResolution()) {
+                    error.resolve(actContext);
+                }
             }
         });
 
@@ -240,7 +249,7 @@ public class ShealthPlugin extends CordovaPlugin {
 
     private Set<PermissionKey> generatePermissionKeySet() {
         Set<PermissionKey> pmsKeySet = new HashSet<PermissionKey>();
-        pmsKeySet.add(new PermissionKey(Sleep.HEALTH_DATA_TYPE, PermissionType.READ));
+        //pmsKeySet.add(new PermissionKey(Sleep.HEALTH_DATA_TYPE, PermissionType.READ));
         pmsKeySet.add(new PermissionKey(StepCount.HEALTH_DATA_TYPE, PermissionType.READ));
         pmsKeySet.add(new PermissionKey(StepCountReader.STEP_SUMMARY_DATA_TYPE_NAME, PermissionType.READ));
         return pmsKeySet;
@@ -269,12 +278,22 @@ public class ShealthPlugin extends CordovaPlugin {
             long st = args.getJSONObject(0).getLong("startTime");
             mReporter.requestDailySleep(st, callbackContext);
         } else if ("connect".equals(action)) {
+            reqAuth = args.getJSONObject(0).getLong("reqAuth");
+
             connectCallbackContext = callbackContext;
             // Request the connection to the health data store
             if (isPermissionAcquired()) {
-                callbackContext.success();
+                if (reqAuth == 1) {
+                    requestPermission();
+                } else {
+                    callbackContext.success();
+                }
             } else {
-                requestPermission();
+                if (reqAuth == 1) {
+                    requestPermission();
+                } else {
+                    callbackContext.error("No permission, none requested.");
+                }
             }
         }
 
