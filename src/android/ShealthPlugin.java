@@ -1,24 +1,6 @@
-/**
- * Copyright (C) 2014 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Mobile Communication Division,
- * Digital Media & Communications Business, Samsung Electronics Co., Ltd.
- *
- * This software and its documentation are confidential and proprietary
- * information of Samsung Electronics Co., Ltd.  No part of the software and
- * documents may be copied, reproduced, transmitted, translated, or reduced to
- * any electronic medium or machine-readable form without the prior written
- * consent of Samsung Electronics.
- *+
- * Samsung Electronics makes no representations with respect to the contents,
- * and assumes no responsibility for any errors that might appear in the
- * software and documents. This publication and the contents hereof are subject
- * to change without notice.
- */
 
 package com.cordova.shealth;
 
-//import com.globetrekkerchallenge.app.R;
 import com.samsung.android.sdk.healthdata.HealthConnectionErrorResult;
 import com.samsung.android.sdk.healthdata.HealthConstants.StepCount;
 import com.samsung.android.sdk.healthdata.HealthConstants.Sleep;
@@ -55,6 +37,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 import android.content.Context;
+import android.os.Handler;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaArgs;
 import org.apache.cordova.CordovaInterface;
@@ -66,9 +49,11 @@ import org.json.JSONObject;
 
 public class ShealthPlugin extends CordovaPlugin {
 
-    public static final String TAG = "StepDiary";
+    public static final String TAG = "ShealthPlugin";
     private HealthDataStore mStore;
-    private StepCountReader mReporter;
+    private StepCountReader mReader;
+    private StepCountReporter mReporter;
+
     private long mCurrentStartTime;
     private Activity actContext;
     private Context appContext;
@@ -76,6 +61,8 @@ public class ShealthPlugin extends CordovaPlugin {
     private long reqAuth = 0;
     private HashMap<String, TimeUnit> TimeUnitLookup;
     private HashMap<TimeUnit, String> TimeUnitRLookup;
+
+    private CordovaWebView mWebView;
 
     private void fillTimeUnit(TimeUnit t) {
         TimeUnitLookup.put(t.name(), t);
@@ -88,6 +75,7 @@ public class ShealthPlugin extends CordovaPlugin {
 
         actContext = cordova.getActivity();
         appContext = actContext.getApplicationContext();
+        mWebView = webView;
 
         // Get the start time of today in local
         mCurrentStartTime = StepCountReader.TODAY_START_UTC_TIME;
@@ -102,7 +90,8 @@ public class ShealthPlugin extends CordovaPlugin {
 
         // // Request the connection to the health data store
         mStore.connectService();
-        mReporter = new StepCountReader(mStore, actContext);
+        mReader = new StepCountReader(mStore, actContext);
+        mReporter = new StepCountReporter(mStore);
 
         cordova.setActivityResultCallback(this);
     }
@@ -122,6 +111,7 @@ public class ShealthPlugin extends CordovaPlugin {
                 if (connectCallbackContext != null) {
                   connectCallbackContext.success();
                 }
+                mReporter.start(mStepCountObserver);
             } else {
                 if (reqAuth == 1) {
                     requestPermission();
@@ -273,10 +263,10 @@ public class ShealthPlugin extends CordovaPlugin {
             long et = args.getJSONObject(0).getLong("endTime");
 
             //cordova.getThreadPool().execute( new GetStuff(queryData(st, et, dt), callbackContext));
-            mReporter.requestDailyStepCount(st, callbackContext);
+            mReader.requestDailyStepCount(st, callbackContext);
         } else if ("getSleepData".equals(action)) {
             long st = args.getJSONObject(0).getLong("startTime");
-            mReporter.requestDailySleep(st, callbackContext);
+            mReader.requestDailySleep(st, callbackContext);
         } else if ("connect".equals(action)) {
             reqAuth = args.getJSONObject(0).getLong("reqAuth");
 
@@ -299,4 +289,27 @@ public class ShealthPlugin extends CordovaPlugin {
 
         return true;  // Returning false will result in a "MethodNotFound" error.
     }
+
+    private StepCountReporter.StepCountObserver mStepCountObserver = new StepCountReporter.StepCountObserver() {
+      @Override
+      public void onChanged(int count) {
+        Log.d(TAG, "XXX step count: " + count);
+
+        final String s = "window.forwardOrQueue({ sHealthStepCount: " + count + " });";
+
+        actContext.runOnUiThread(new Runnable() {
+            public void run() {
+              final Handler handler = new Handler();
+              handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                  mWebView.sendJavascript(s);
+                }
+              }, 100);
+            }
+        });
+
+      }
+    };
+
 }
