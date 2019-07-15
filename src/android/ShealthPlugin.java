@@ -277,6 +277,7 @@ public class ShealthPlugin extends CordovaPlugin {
                     requestPermission();
                 } else {
                     callbackContext.success();
+                    mReporter.start(mStepCountObserver);
                 }
             } else {
                 if (reqAuth == 1) {

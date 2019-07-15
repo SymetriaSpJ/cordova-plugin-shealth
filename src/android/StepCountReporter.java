@@ -19,7 +19,7 @@ import java.util.TimeZone;
 public class StepCountReporter {
     public static final String TAG = "StepCountReporter";
     private final HealthDataStore mStore;
-    private StepCountObserver mStepCountObserver;
+    private StepCountObserver mStepCountObserver = null;
     private static final long ONE_DAY_IN_MILLIS = 24 * 60 * 60 * 1000L;
 
     public StepCountReporter(HealthDataStore store) {
@@ -27,10 +27,12 @@ public class StepCountReporter {
     }
 
     public void start(StepCountObserver listener) {
-        mStepCountObserver = listener;
-        // Register an observer to listen changes of step count and get today step count
-        HealthDataObserver.addObserver(mStore, HealthConstants.StepCount.HEALTH_DATA_TYPE, mObserver);
-        readTodayStepCount();
+        if (mStepCountObserver == null) {
+          mStepCountObserver = listener;
+          // Register an observer to listen changes of step count and get today step count
+          HealthDataObserver.addObserver(mStore, HealthConstants.StepCount.HEALTH_DATA_TYPE, mObserver);
+          readTodayStepCount();
+        }
     }
 
     // Read the today's step count on demand
