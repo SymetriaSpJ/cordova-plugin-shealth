@@ -50,8 +50,6 @@ public class ShealthPlugin extends CordovaPlugin {
     public static final String TAG = "ShealthPlugin";
     private HealthDataStore mStore;
     private StepCountReader mReader;
-    private StepCountReporter mReporter;
-
     private long mCurrentStartTime;
     private Activity actContext;
     private Context appContext;
@@ -59,8 +57,6 @@ public class ShealthPlugin extends CordovaPlugin {
     private long reqAuth = 0;
     private HashMap<String, TimeUnit> TimeUnitLookup;
     private HashMap<TimeUnit, String> TimeUnitRLookup;
-
-    private CordovaWebView mWebView;
 
     private void fillTimeUnit(TimeUnit t) {
         TimeUnitLookup.put(t.name(), t);
@@ -73,7 +69,6 @@ public class ShealthPlugin extends CordovaPlugin {
 
         actContext = cordova.getActivity();
         appContext = actContext.getApplicationContext();
-        mWebView = webView;
 
         // Get the start time of today in local
         mCurrentStartTime = StepCountReader.TODAY_START_UTC_TIME;
@@ -89,7 +84,6 @@ public class ShealthPlugin extends CordovaPlugin {
         // // Request the connection to the health data store
         mStore.connectService();
         mReader = new StepCountReader(mStore, actContext);
-        mReporter = new StepCountReporter(mStore);
 
         cordova.setActivityResultCallback(this);
     }
@@ -109,7 +103,6 @@ public class ShealthPlugin extends CordovaPlugin {
                 if (connectCallbackContext != null) {
                   connectCallbackContext.success();
                 }
-                mReporter.start(mStepCountObserver);
             } else {
                 if (reqAuth == 1) {
                     requestPermission();
@@ -262,23 +255,12 @@ public class ShealthPlugin extends CordovaPlugin {
 
             return true;
         } else if ("connect".equals(action)) {
-            reqAuth = args.getJSONObject(0).getLong("reqAuth");
-
             connectCallbackContext = callbackContext;
             // Request the connection to the health data store
             if (isPermissionAcquired()) {
-                if (reqAuth == 1) {
-                    requestPermission();
-                } else {
-                    callbackContext.success();
-                    mReporter.start(mStepCountObserver);
-                }
+                callbackContext.success();
             } else {
-                if (reqAuth == 1) {
-                    requestPermission();
-                } else {
-                    callbackContext.error("No permission, none requested.");
-                }
+                requestPermission();
             }
 
             return true;
@@ -286,27 +268,4 @@ public class ShealthPlugin extends CordovaPlugin {
 
         return false;  // Returning false will result in a "MethodNotFound" error.
     }
-
-    private StepCountReporter.StepCountObserver mStepCountObserver = new StepCountReporter.StepCountObserver() {
-      @Override
-      public void onChanged(int count) {
-        Log.d(TAG, "XXX step count: " + count);
-
-        final String s = "window.forwardOrQueue({ sHealthStepCount: " + count + " });";
-
-        actContext.runOnUiThread(new Runnable() {
-            public void run() {
-              final Handler handler = new Handler();
-              handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                  mWebView.sendJavascript(s);
-                }
-              }, 100);
-            }
-        });
-
-      }
-    };
-
 }

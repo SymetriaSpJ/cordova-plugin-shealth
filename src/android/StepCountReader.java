@@ -143,7 +143,8 @@ public class StepCountReader {
 
                             long dayTime = c.getLong(c.getColumnIndex("day_time"));
                             int stepCount = c.getInt(c.getColumnIndex("count"));
-
+                            float calories = c.getLong(c.getColumnIndex(StepCount.CALORIE));
+                            float distance = c.getLong(c.getColumnIndex(StepCount.DISTANCE));
 
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
                             //Log.d("date", dateFormat.format(dayTime));
@@ -151,6 +152,8 @@ public class StepCountReader {
                             JSONObject daySteps = new JSONObject();
                             daySteps.put("date", dayTime);
                             daySteps.put("stepCount", stepCount);
+                            daySteps.put("calories", calories);
+                            daySteps.put("distance", distance);
                             stepResponse.put(daySteps);
                         }
                     } else {

@@ -7,9 +7,7 @@ ShealthPlugin.prototype.getData = function (startTime, endTime, datatypes, succe
                "ShealthPlugin",
                "getData",
                [{
-                 "startTime" : startTime,
-                 "endTime" : endTime,
-                 "datatypes": datatypes
+                 "startTime" : startTime
                }]);
 };
 ShealthPlugin.prototype.connect = function (reqAuth, successCallback, failureCallback) {
@@ -17,9 +15,7 @@ ShealthPlugin.prototype.connect = function (reqAuth, successCallback, failureCal
                failureCallback,
                "ShealthPlugin",
                "connect",
-               [{
-                 "reqAuth": reqAuth
-               }]);
+               []);
 };
 
 ShealthPlugin.install = function () {
