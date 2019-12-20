@@ -1,7 +1,7 @@
 function ShealthPlugin() {
 }
 
-ShealthPlugin.prototype.getData = function (startTime, endTime, datatypes, successCallback, failureCallback) {
+ShealthPlugin.prototype.getData = function (startTime, successCallback, failureCallback) {
   cordova.exec(successCallback,
                failureCallback,
                "ShealthPlugin",
@@ -10,7 +10,7 @@ ShealthPlugin.prototype.getData = function (startTime, endTime, datatypes, succe
                  "startTime" : startTime
                }]);
 };
-ShealthPlugin.prototype.connect = function (reqAuth, successCallback, failureCallback) {
+ShealthPlugin.prototype.connect = function (successCallback, failureCallback) {
   cordova.exec(successCallback,
                failureCallback,
                "ShealthPlugin",
