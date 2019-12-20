@@ -1,6 +1,6 @@
 // Real time step count reporter - report today's total step count
 
-package com.cordova.shealth;
+package com.cordova.plugins.shealth;
 
 import com.samsung.android.sdk.healthdata.HealthConstants;
 import com.samsung.android.sdk.healthdata.HealthData;

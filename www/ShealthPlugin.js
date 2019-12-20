@@ -1,4 +1,3 @@
-cordova.define("cordova-plugin-samsunghealth.ShealthPlugin", function(require, exports, module) {
 function ShealthPlugin() {
 }
 
@@ -7,17 +6,6 @@ ShealthPlugin.prototype.getData = function (startTime, endTime, datatypes, succe
                failureCallback,
                "ShealthPlugin",
                "getData",
-               [{
-                 "startTime" : startTime,
-                 "endTime" : endTime,
-                 "datatypes": datatypes
-               }]);
-};
-ShealthPlugin.prototype.getSleepData = function (startTime, endTime, datatypes, successCallback, failureCallback) {
-  cordova.exec(successCallback,
-               failureCallback,
-               "ShealthPlugin",
-               "getSleepData",
                [{
                  "startTime" : startTime,
                  "endTime" : endTime,
@@ -44,5 +32,3 @@ ShealthPlugin.install = function () {
 };
 
 cordova.addConstructor(ShealthPlugin.install);
-
-});

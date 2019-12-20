@@ -16,7 +16,7 @@
  * to change without notice.
  */
 
-package com.cordova.shealth;
+package com.cordova.plugins.shealth;
 
 import android.app.Activity;
 import android.content.Context;
@@ -73,7 +73,6 @@ import org.json.JSONObject;
 public class StepCountReader {
 
     public static final String STEP_SUMMARY_DATA_TYPE_NAME = "com.samsung.shealth.step_daily_trend";
-    public static final String SLEEP_DATA_TYPE_NAME = "com.samsung.health.sleep";
 
     public static final long TODAY_START_UTC_TIME;
     public static final long ONE_DAY = 24 * 60 * 60 * 1000;
@@ -112,67 +111,6 @@ public class StepCountReader {
     public void requestDailyStepCount(long startTime, final CallbackContext callbackContext) {
             // Get historical step count
             readStepDailyTrend(startTime, callbackContext);
-    }
-    public void requestDailySleep(long startTime, final CallbackContext callbackContext) {
-        // Get historical sleep
-        Filter filter = Filter.and(Filter.greaterThanEquals(Sleep.END_TIME, startTime));
-                // filtering source type "combined(-2)"
-
-
-        ReadRequest request = new ReadRequest.Builder()
-                .setDataType(SLEEP_DATA_TYPE_NAME)
-                .setFilter(filter)
-                .build();
-
-        try {
-            mResolver.read(request).setResultListener(new HealthResultHolder.ResultListener<HealthDataResolver.ReadResult>(){
-
-            @Override
-            public void onResult(HealthDataResolver.ReadResult result) {
-
-
-                int totalCount = 0;
-                JSONArray sleepResponse = new JSONArray();
-                List<StepBinningData> binningDataList = Collections.emptyList();
-                Cursor c = null;
-                try {
-                    c = result.getResultCursor();
-                    if (c != null) {
-                        while(c.moveToNext()) {
-
-                            long startSleepTime = c.getLong(c.getColumnIndex(Sleep.START_TIME));
-                            long endSleepTime = c.getLong(c.getColumnIndex(Sleep.END_TIME));
-                            long sleepOffset = c.getLong(c.getColumnIndex(Sleep.TIME_OFFSET));
-                            //Log.d("date", dateFormat.format(dayTime));
-                            Log.d("count", "Step Count: " + startSleepTime);
-                            JSONObject daySleep = new JSONObject();
-                            daySleep.put("startTime", startSleepTime);
-                            daySleep.put("endSleepTime", endSleepTime);
-                            daySleep.put("offset", sleepOffset);
-                            sleepResponse.put(daySleep);
-                        }
-                    } else {
-                        Log.d("cursor", "The cursor is null.");
-                    }
-                }
-                catch(Exception e) {
-                    Log.e("message", e.getClass().getName() + " - " + e.getMessage());
-                }
-                finally {
-                    if (c != null) {
-                        c.close();
-                    }
-                }
-                if(callbackContext != null) {
-                    callbackContext.success(sleepResponse);
-                }
-
-            }});
-        } catch (Exception e) {
-            JSONArray stepResponse = new JSONArray();
-            Log.e("StepCounterReader", "Getting daily step trend fails.", e);
-            callbackContext.success(stepResponse);
-        }
     }
 
     private void readStepDailyTrend(final long startTime, final CallbackContext callbackContext) {

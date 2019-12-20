@@ -1,9 +1,7 @@
-
-package com.cordova.shealth;
+package com.cordova.plugins.shealth;
 
 import com.samsung.android.sdk.healthdata.HealthConnectionErrorResult;
 import com.samsung.android.sdk.healthdata.HealthConstants.StepCount;
-import com.samsung.android.sdk.healthdata.HealthConstants.Sleep;
 import com.samsung.android.sdk.healthdata.HealthDataService;
 import com.samsung.android.sdk.healthdata.HealthDataStore;
 import com.samsung.android.sdk.healthdata.HealthPermissionManager;
@@ -239,7 +237,6 @@ public class ShealthPlugin extends CordovaPlugin {
 
     private Set<PermissionKey> generatePermissionKeySet() {
         Set<PermissionKey> pmsKeySet = new HashSet<PermissionKey>();
-        //pmsKeySet.add(new PermissionKey(Sleep.HEALTH_DATA_TYPE, PermissionType.READ));
         pmsKeySet.add(new PermissionKey(StepCount.HEALTH_DATA_TYPE, PermissionType.READ));
         pmsKeySet.add(new PermissionKey(StepCountReader.STEP_SUMMARY_DATA_TYPE_NAME, PermissionType.READ));
         return pmsKeySet;
@@ -260,13 +257,10 @@ public class ShealthPlugin extends CordovaPlugin {
         if ("getData".equals(action)) {
 
             long st = args.getJSONObject(0).getLong("startTime");
-            long et = args.getJSONObject(0).getLong("endTime");
 
-            //cordova.getThreadPool().execute( new GetStuff(queryData(st, et, dt), callbackContext));
             mReader.requestDailyStepCount(st, callbackContext);
-        } else if ("getSleepData".equals(action)) {
-            long st = args.getJSONObject(0).getLong("startTime");
-            mReader.requestDailySleep(st, callbackContext);
+
+            return true;
         } else if ("connect".equals(action)) {
             reqAuth = args.getJSONObject(0).getLong("reqAuth");
 
@@ -286,9 +280,11 @@ public class ShealthPlugin extends CordovaPlugin {
                     callbackContext.error("No permission, none requested.");
                 }
             }
+
+            return true;
         }
 
-        return true;  // Returning false will result in a "MethodNotFound" error.
+        return false;  // Returning false will result in a "MethodNotFound" error.
     }
 
     private StepCountReporter.StepCountObserver mStepCountObserver = new StepCountReporter.StepCountObserver() {
