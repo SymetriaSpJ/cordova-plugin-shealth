@@ -24,10 +24,11 @@
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <meta-data
                 android:name="com.samsung.android.health.permission.read"
-                android:value="com.samsung.health.step_count;com.samsung.shealth.step_daily_trend" />
+                android:value="com.samsung.shealth.step_daily_trend;com.samsung.health.exercise" />
         </config-file>
         <source-file src="src/android/ShealthPlugin.java" target-dir="src/com/cordova/plugins/shealth" />
         <source-file src="src/android/StepCountReader.java" target-dir="src/com/cordova/plugins/shealth" />
+        <source-file src="src/android/ExercisesReader.java" target-dir="src/com/cordova/plugins/shealth" />
         <lib-file src="src/android/samsung-health-data-v1.4.0.jar" />
         <lib-file src="src/android/sdk-v1.0.0.jar" />
     </platform>

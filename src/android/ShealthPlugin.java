@@ -1,8 +1,7 @@
 package com.cordova.plugins.shealth;
 
 import com.samsung.android.sdk.healthdata.HealthConnectionErrorResult;
-import com.samsung.android.sdk.healthdata.HealthConstants.StepCount;
-import com.samsung.android.sdk.healthdata.HealthDataService;
+import com.samsung.android.sdk.healthdata.HealthConstants;
 import com.samsung.android.sdk.healthdata.HealthDataStore;
 import com.samsung.android.sdk.healthdata.HealthPermissionManager;
 import com.samsung.android.sdk.healthdata.HealthPermissionManager.PermissionKey;
@@ -11,33 +10,12 @@ import com.samsung.android.sdk.healthdata.HealthPermissionManager.PermissionType
 import com.samsung.android.sdk.healthdata.HealthResultHolder;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.BaseAdapter;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.content.DialogInterface;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
-import android.content.Context;
-import android.os.Handler;
+
 import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaArgs;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
@@ -49,44 +27,21 @@ public class ShealthPlugin extends CordovaPlugin {
 
     public static final String TAG = "ShealthPlugin";
     private HealthDataStore mStore;
-    private StepCountReader mReader;
-    private long mCurrentStartTime;
-    private Activity actContext;
-    private Context appContext;
+    private StepCountReader mStepCountReader;
+    private ExercisesReader mExercisesReader;
+    private Activity activityContext;
     private CallbackContext connectCallbackContext;
-    private long reqAuth = 0;
-    private HashMap<String, TimeUnit> TimeUnitLookup;
-    private HashMap<TimeUnit, String> TimeUnitRLookup;
-
-    private void fillTimeUnit(TimeUnit t) {
-        TimeUnitLookup.put(t.name(), t);
-        TimeUnitRLookup.put(t, t.name());
-    }
+    private CallbackContext permissionCallbackContext;
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
 
-        actContext = cordova.getActivity();
-        appContext = actContext.getApplicationContext();
-
-        // Get the start time of today in local
-        mCurrentStartTime = StepCountReader.TODAY_START_UTC_TIME;
-        HealthDataService healthDataService = new HealthDataService();
-        try {
-            healthDataService.initialize(actContext);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        // Create a HealthDataStore instance and set its listener
-        mStore = new HealthDataStore(actContext, mConnectionListener);
-
-        // // Request the connection to the health data store
-        mStore.connectService();
-        mReader = new StepCountReader(mStore, actContext);
+        activityContext = cordova.getActivity();
 
         cordova.setActivityResultCallback(this);
     }
+
 
     @Override
     public void onDestroy() {
@@ -98,46 +53,58 @@ public class ShealthPlugin extends CordovaPlugin {
         @Override
         public void onConnected() {
             Log.d(TAG, "onConnected");
-            if (isPermissionAcquired()) {
-                Log.d(TAG, "Permission is acquired already");
-                if (connectCallbackContext != null) {
-                  connectCallbackContext.success();
-                }
-            } else {
-                if (reqAuth == 1) {
-                    requestPermission();
-                } else {
-                    if (connectCallbackContext != null) {
-                        connectCallbackContext.error("no permission, no auth");
-                    }
-                }
-            }
+
+            connectCallbackContext.success();
         }
 
         @Override
         public void onConnectionFailed(HealthConnectionErrorResult error) {
             Log.d(TAG, "onConnectionFailed");
-            showConnectionFailureDialog(error);
+
             if (connectCallbackContext != null) {
-              connectCallbackContext.error("Failed to connect: " + error.getErrorCode());
+                String message = "";
+
+                if (error.hasResolution()) {
+                    switch (error.getErrorCode()) {
+                        case HealthConnectionErrorResult.PLATFORM_NOT_INSTALLED:
+                            message = "Samsung Health: Platform is not installed";
+                            break;
+                        case HealthConnectionErrorResult.OLD_VERSION_PLATFORM:
+                            message = "Samsung Health: Requires Upgrade";
+                            break;
+                        case HealthConnectionErrorResult.PLATFORM_DISABLED:
+                            message = "Samsung Health: Platform is disabled";
+                            break;
+                        case HealthConnectionErrorResult.USER_AGREEMENT_NEEDED:
+                            message = "Samsung Health: User agreement needed";
+                            break;
+                        default:
+                            message = "Connection available";
+                            break;
+                    }
+                } else {
+                    message = "Connection not available";
+                }
+
+                JSONObject errorObject = new JSONObject();
+                try {
+                    errorObject.put("message", "Failed to connect: " + message);
+                    errorObject.put("errorCode", error.getErrorCode());
+
+                    connectCallbackContext.error(errorObject);
+                } catch (JSONException e) {
+                    connectCallbackContext.error("Failed to connect: " + message);
+                }
             }
         }
 
         @Override
         public void onDisconnected() {
             Log.d(TAG, "onDisconnected");
-            mStore.connectService();
 
+            mStore.connectService();
         }
     };
-    private void updateBinningData(List<StepCountReader.StepBinningData> stepBinningDataList) {
-        // the following code will be replaced with chart drawing code
-        Log.d(TAG, "updateBinningChartView");
-        // mBinningListAdapter.changeDataSet(stepBinningDataList);
-        // for (StepCountReader.StepBinningData data : stepBinningDataList) {
-        //     Log.d(TAG, "TIME : " + data.time + "  COUNT : " + data.count);
-        // }
-    }
 
     private final HealthResultHolder.ResultListener<PermissionResult> mPermissionListener =
             new HealthResultHolder.ResultListener<PermissionResult>() {
@@ -145,72 +112,21 @@ public class ShealthPlugin extends CordovaPlugin {
         @Override
         public void onResult(PermissionResult result) {
             Map<PermissionKey, Boolean> resultMap = result.getResultMap();
-            // Show a permission alarm and clear step count if permissions are not acquired
-            if (resultMap.values().contains(Boolean.FALSE)) {
-                //showPermissionAlarmDialog();
-                connectCallbackContext.error("Permission was not given");
+
+            if (resultMap.values().contains(Boolean.TRUE)) {
+                permissionCallbackContext.success(1);
             }
             else {
-                connectCallbackContext.success();
+                permissionCallbackContext.success(0);
             }
         }
     };
 
-    private void showPermissionAlarmDialog() {
-        AlertDialog.Builder alert = new AlertDialog.Builder(cordova.getActivity());
-        alert.setTitle("Notice")
-                .setMessage("Permission Required")
-                .setPositiveButton("OK", null)
-                .show();
-    }
-
-    private void showConnectionFailureDialog(final HealthConnectionErrorResult error) {
-
-        AlertDialog.Builder alert = new AlertDialog.Builder(cordova.getActivity());
-
-        if (error.hasResolution()) {
-            switch (error.getErrorCode()) {
-                case HealthConnectionErrorResult.PLATFORM_NOT_INSTALLED:
-                    alert.setMessage("Samsung Health: Platform is not installed");
-                    break;
-                case HealthConnectionErrorResult.OLD_VERSION_PLATFORM:
-                    alert.setMessage("Samsung Health: Requires Upgrade");
-                    break;
-                case HealthConnectionErrorResult.PLATFORM_DISABLED:
-                    alert.setMessage("Samsung Health: Platform is disabled");
-                    break;
-                case HealthConnectionErrorResult.USER_AGREEMENT_NEEDED:
-                    alert.setMessage("Samsung Health: User agreement needed");
-                    break;
-                default:
-                    alert.setMessage("Connection available");
-                    break;
-            }
-        } else {
-            alert.setMessage("Connection not available");
-        }
-
-        alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                if (error.hasResolution()) {
-                    error.resolve(actContext);
-                }
-            }
-        });
-
-        if (error.hasResolution()) {
-            alert.setNegativeButton("Cancel", null);
-        }
-
-        alert.show();
-    }
-
     private boolean isPermissionAcquired() {
         HealthPermissionManager pmsManager = new HealthPermissionManager(mStore);
         try {
-            // Check whether the permissions that this application needs are acquired
             Map<PermissionKey, Boolean> resultMap = pmsManager.isPermissionAcquired(generatePermissionKeySet());
-            return !resultMap.values().contains(Boolean.FALSE);
+            return resultMap.values().contains(Boolean.TRUE);
         } catch (Exception e) {
             Log.e(TAG, "Permission request fails.", e);
         }
@@ -221,7 +137,7 @@ public class ShealthPlugin extends CordovaPlugin {
         HealthPermissionManager pmsManager = new HealthPermissionManager(mStore);
         try {
             // Show user permission UI for allowing user to change options
-            pmsManager.requestPermissions(generatePermissionKeySet(), actContext)
+            pmsManager.requestPermissions(generatePermissionKeySet(), activityContext)
                     .setResultListener(mPermissionListener);
         } catch (Exception e) {
             Log.e(TAG, "Permission setting fails.", e);
@@ -229,9 +145,10 @@ public class ShealthPlugin extends CordovaPlugin {
     }
 
     private Set<PermissionKey> generatePermissionKeySet() {
-        Set<PermissionKey> pmsKeySet = new HashSet<PermissionKey>();
-        pmsKeySet.add(new PermissionKey(StepCount.HEALTH_DATA_TYPE, PermissionType.READ));
+        Set<PermissionKey> pmsKeySet = new HashSet<>();
         pmsKeySet.add(new PermissionKey(StepCountReader.STEP_SUMMARY_DATA_TYPE_NAME, PermissionType.READ));
+        pmsKeySet.add(new PermissionKey(HealthConstants.Exercise.HEALTH_DATA_TYPE, PermissionType.READ));
+
         return pmsKeySet;
     }
 
@@ -245,27 +162,75 @@ public class ShealthPlugin extends CordovaPlugin {
      */
     @Override
     public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
-
-        // Select the getData: get Datasets+Datapoints from GoogleFit according to the query parameters
-        if ("getData".equals(action)) {
-
-            long st = args.getJSONObject(0).getLong("startTime");
-
-            mReader.requestDailyStepCount(st, callbackContext);
-
-            return true;
-        } else if ("connect".equals(action)) {
-            connectCallbackContext = callbackContext;
-            // Request the connection to the health data store
-            if (isPermissionAcquired()) {
-                callbackContext.success();
-            } else {
-                requestPermission();
-            }
+        if ("initialize".equals(action)) {
+            handleInitialize(callbackContext);
 
             return true;
         }
 
-        return false;  // Returning false will result in a "MethodNotFound" error.
+        if ("isConnected".equals(action)) {
+            handleIsConnected(callbackContext);
+
+            return true;
+        }
+
+        if ("connect".equals(action)) {
+            handleConnect(callbackContext);
+
+            return true;
+        }
+
+        if ("getDailySteps".equals(action)) {
+            handleGetDailySteps(args, callbackContext);
+
+            return true;
+        }
+
+        if ("getExercises".equals(action)) {
+            handleGetExercises(args, callbackContext);
+
+            return true;
+        }
+
+        callbackContext.error("Action not found");
+
+        return false;
+    }
+
+    private void handleInitialize(CallbackContext callbackContext) {
+        connectCallbackContext = callbackContext;
+
+        mStore = new HealthDataStore(activityContext, mConnectionListener);
+
+        mStore.connectService();
+
+        mStepCountReader = new StepCountReader(mStore);
+        mExercisesReader = new ExercisesReader(mStore);
+    }
+
+    private void handleIsConnected(CallbackContext callbackContext) {
+        if (isPermissionAcquired()) {
+            callbackContext.success();
+        } else {
+            callbackContext.error("not connected");
+        }
+    }
+
+    private void handleConnect(CallbackContext callbackContext) {
+        permissionCallbackContext = callbackContext;
+
+        requestPermission();
+    }
+
+    private void handleGetDailySteps(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        long startTime = args.getJSONObject(0).getLong("startTime");
+
+        mStepCountReader.get(startTime, callbackContext);
+    }
+
+    private void handleGetExercises(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        long startTime = args.getJSONObject(0).getLong("startTime");
+
+        mExercisesReader.get(startTime, callbackContext);
     }
 }
