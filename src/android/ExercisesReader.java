@@ -36,7 +36,8 @@ public class ExercisesReader {
                         HealthConstants.Exercise.END_TIME,
                         HealthConstants.Exercise.DISTANCE,
                         HealthConstants.Exercise.CALORIE,
-                        HealthConstants.Exercise.EXERCISE_TYPE
+                        HealthConstants.Exercise.EXERCISE_TYPE,
+                        HealthConstants.Common.PACKAGE_NAME
                 })
                 .setSort(HealthConstants.Exercise.END_TIME, SortOrder.DESC)
                 .setFilter(filter)
@@ -58,6 +59,7 @@ public class ExercisesReader {
                         exercise.put("distance", Math.round(data.getDouble(HealthConstants.Exercise.DISTANCE)));
                         exercise.put("calories", Math.round(data.getDouble(HealthConstants.Exercise.CALORIE)));
                         exercise.put("type", data.getLong(HealthConstants.Exercise.EXERCISE_TYPE));
+                        exercise.put("source", data.getString(HealthConstants.Common.PACKAGE_NAME));
 
                         response.put(exercise);
                     }
